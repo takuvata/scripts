@@ -1,6 +1,6 @@
-#Fstress
+# Fstress
 A naive script to stress load a file system with many parallel reads/writes. It is not a benchmark.
-##Environment Variables
+## Environment Variables
 Following environment variables can be exported to tweak the behaviour:
   * STRS_W_P_COUNT - how many subprocesses are created for writing.
   * STRS_R_P_COUNT - how many subprocesses are created for reading.
