@@ -1,7 +1,7 @@
 #!/bin/bash
 
 [ -z $STRS_W_P_COUNT ] && STRS_W_P_COUNT=6
-[ -z $STRS_W_F_COUNT ] && STRS_W_F_COUNT=10000
+[ -z $STRS_W_F_COUNT ] && STRS_W_F_COUNT=1000
 [ -z $STRS_R_P_COUNT ] && STRS_R_P_COUNT=16
 [ -z $STRS_F_SIZE ] && STRS_F_SIZE=5120
 
@@ -15,7 +15,7 @@ which pkill &>/dev/null || exit 1
 STRS_W_DIR=$(mktemp -d --tmpdir=$STRS_BASE_PATH -t fstress.XXXXXXXXX) || exit 1
 
 STRS_PIPE=$(mktemp -u)
-mkpipe $STRS_PIPE
+mkfifo $STRS_PIPE
 
 strs_init() {
   echo -n Initializing data set...
@@ -89,9 +89,11 @@ while :; do
     fi
   done
   now=$(date +%s)
-  if [ $[$now - $timer] -gt 5 ]; then
-    echo $reads files read
-    echo $writes files written
+  t_delta=$[$now - $timer]
+  if [ $t_delta -gt 4 ]; then
+    echo $writes files written, $reads files read in $t_delta seconds
+    reads=0
+    writes=0
     timer=$now
   fi
 done
