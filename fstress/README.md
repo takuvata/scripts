@@ -9,5 +9,7 @@ Following environment variables can be exported to tweak the behaviour:
   * STRS_W_SLEEP - number of seconds up to which each process will sleep after a write (randomized).
   * STRS_P_SLEEP - number of seconds up to which each process will sleep after a read (randomized).
   * STRS_BASE_PATH - a file system path where data set is created.
+## Arguments
+  * --skip_init - skips data set initialization, reads may fail
 
 The default values are set for a heavy random read on large number of small files.

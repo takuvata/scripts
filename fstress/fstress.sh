@@ -1,8 +1,8 @@
 #!/bin/bash
 
-[ -z $STRS_W_P_COUNT ] && STRS_W_P_COUNT=6
-[ -z $STRS_W_F_COUNT ] && STRS_W_F_COUNT=1000
-[ -z $STRS_R_P_COUNT ] && STRS_R_P_COUNT=16
+[ -z $STRS_W_P_COUNT ] && STRS_W_P_COUNT=8
+[ -z $STRS_W_F_COUNT ] && STRS_W_F_COUNT=100000
+[ -z $STRS_R_P_COUNT ] && STRS_R_P_COUNT=64
 [ -z $STRS_F_SIZE ] && STRS_F_SIZE=5120
 
 [ -z $STRS_W_SLEEP ] && STRS_W_SLEEP=3
@@ -12,10 +12,16 @@
 
 which pkill &>/dev/null || exit 1
 
-STRS_W_DIR=$(mktemp -d --tmpdir=$STRS_BASE_PATH -t fstress.XXXXXXXXX) || exit 1
+STRS_W_DIR=$(mktemp -d --tmpdir=$STRS_BASE_PATH -t fstress_data.XXXXXXXXX) || exit 1
 
-STRS_PIPE=$(mktemp -u)
+STRS_PIPE=$(mktemp -u -t fstress_pipe.XXXXXXXXX)
 mkfifo $STRS_PIPE
+
+cleanup(){
+  pkill -P $$
+  rm -fr ${STRS_W_DIR}
+  rm -f ${STRS_PIPE}
+}
 
 strs_init() {
   echo -n Initializing data set...
@@ -24,18 +30,19 @@ strs_init() {
     for file in $(seq 1 $STRS_W_F_COUNT); do
       if ! dd if=/dev/urandom of=${STRS_W_DIR}/${process}/${file} bs=$STRS_F_SIZE count=1 &>/dev/null; then
         echo failed
-        rm -fr ${STRS_W_DIR}
-        rm -f ${STRS_PIPE}
+        cleanup
         exit 1
       fi
     done
   done
   echo done
+  echo Data set: $(du -sh $STRS_W_DIR)
 }
 
 strs_write() {
   while :; do
-    dd if=/dev/urandom of=${STRS_W_DIR}/${1}/$[$RANDOM % $STRS_W_F_COUNT + 1] bs=$STRS_F_SIZE count=1 &>/dev/null
+    [ -d ${STRS_W_DIR}/${1} ] || mkdir ${STRS_W_DIR}/${1}
+    dd if=/dev/urandom of=${STRS_W_DIR}/${1}/$[$RANDOM % $STRS_W_F_COUNT + 1] bs=$STRS_F_SIZE count=1 &>/dev/null &&\
     echo 0 > $STRS_PIPE
     [ -z $STRS_W_SLEEP ] || sleep $[$RANDOM % ($STRS_W_SLEEP + 1)]
   done
@@ -43,21 +50,20 @@ strs_write() {
 
 strs_read() {
   while :; do
-    dd if=${STRS_W_DIR}/$[$RANDOM % $STRS_W_P_COUNT + 1]/$[$RANDOM % $STRS_W_F_COUNT + 1] of=/dev/null &> /dev/null
+    dd if=${STRS_W_DIR}/$[$RANDOM % $STRS_W_P_COUNT + 1]/$[$RANDOM % $STRS_W_F_COUNT + 1] of=/dev/null &> /dev/null &&\
     echo 1 > $STRS_PIPE
     [ -z $STRS_R_SLEEP ] || sleep $[$RANDOM % ($STRS_R_SLEEP + 1) ]
   done
 }
 
-trap "pkill -P $$; rm -fr ${STRS_W_DIR}; rm -f ${STRS_PIPE}; exit 0" SIGHUP SIGINT SIGTERM
+trap "cleanup; exit 0" SIGHUP SIGINT SIGTERM
 
 echo Starting with $STRS_W_P_COUNT write, $STRS_R_P_COUNT read processes.
 echo File size: $STRS_F_SIZE bytes.
 echo Each write process handles $STRS_W_F_COUNT files.
 
-strs_init
+[[ $1 == '--skip_init'  ]] || strs_init
 
-echo Data set: $(du -sh $STRS_W_DIR)
 if [ -z $STRS_W_SLEEP ]; then
   echo Writes never stop.
 else
@@ -79,7 +85,11 @@ done
 
 reads=0
 writes=0
-timer=$(date +%s)
+time_start=$(date +%s)
+timer=$time_start
+echo ----------------
+echo Every 5 seconds:
+printf '%8s %8s %8s\n' 'Time' 'Writes' 'Reads'
 while :; do
   for event in $(<$STRS_PIPE); do
     if [ $event -eq 1 ]; then
@@ -89,9 +99,8 @@ while :; do
     fi
   done
   now=$(date +%s)
-  t_delta=$[$now - $timer]
-  if [ $t_delta -gt 4 ]; then
-    echo $writes files written, $reads files read in $t_delta seconds
+  if [ $[$now - $timer] -gt 4 ]; then
+    printf '%8s %8s %8s\n' $[$now - $time_start] $writes $reads
     reads=0
     writes=0
     timer=$now
