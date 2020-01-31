@@ -42,7 +42,7 @@ strs_init() {
 strs_write() {
   while :; do
     [ -d ${STRS_W_DIR}/${1} ] || mkdir ${STRS_W_DIR}/${1}
-    # For whatever reason reporting status to the pipe, somehow manages to kill the parent process eventualy.
+    # For whatever reason reporting status to the pipe, somehow manages to kill the parent process eventually.
     # To mitigate the problem just put this bit in to a subshell.
     # If someone could explain this to me properly - I owe you lots of beer!
    ( dd if=/dev/urandom of=${STRS_W_DIR}/${1}/$[$RANDOM % $STRS_W_F_COUNT + 1] bs=$STRS_F_SIZE count=1 &>/dev/null &&\
