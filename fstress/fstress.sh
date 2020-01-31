@@ -1,11 +1,11 @@
 #!/bin/bash
 
-[ -z $STRS_W_P_COUNT ] && STRS_W_P_COUNT=8
+[ -z $STRS_W_P_COUNT ] && STRS_W_P_COUNT=16
 [ -z $STRS_W_F_COUNT ] && STRS_W_F_COUNT=100000
-[ -z $STRS_R_P_COUNT ] && STRS_R_P_COUNT=64
+[ -z $STRS_R_P_COUNT ] && STRS_R_P_COUNT=128
 [ -z $STRS_F_SIZE ] && STRS_F_SIZE=5120
 
-[ -z $STRS_W_SLEEP ] && STRS_W_SLEEP=3
+[ -z $STRS_W_SLEEP ] && STRS_W_SLEEP=2
 [ -z $STRS_R_SLEEP ] && STRS_R_SLEEP=
 
 [ -z $STRS_BASE_PATH ] && STRS_BASE_PATH=.
@@ -28,7 +28,7 @@ strs_init() {
   for process in $(seq 1 $STRS_W_P_COUNT); do
     mkdir ${STRS_W_DIR}/${process}
     for file in $(seq 1 $STRS_W_F_COUNT); do
-      if ! dd if=/dev/urandom of=${STRS_W_DIR}/${process}/${file} bs=$STRS_F_SIZE count=1 &>/dev/null; then
+      if ! dd if=/dev/zero of=${STRS_W_DIR}/${process}/${file} bs=$STRS_F_SIZE count=1 &>/dev/null; then
         echo failed
         cleanup
         exit 1
