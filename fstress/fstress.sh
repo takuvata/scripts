@@ -42,16 +42,20 @@ strs_init() {
 strs_write() {
   while :; do
     [ -d ${STRS_W_DIR}/${1} ] || mkdir ${STRS_W_DIR}/${1}
-    dd if=/dev/urandom of=${STRS_W_DIR}/${1}/$[$RANDOM % $STRS_W_F_COUNT + 1] bs=$STRS_F_SIZE count=1 &>/dev/null &&\
-    echo 0 > $STRS_PIPE
+    # For whatever reason reporting status to the pipe, somehow manages to kill the parent process eventualy.
+    # To mitigate the problem just put this bit in to a subshell.
+    # If someone could explain this to me properly - I owe you lots of beer!
+   ( dd if=/dev/urandom of=${STRS_W_DIR}/${1}/$[$RANDOM % $STRS_W_F_COUNT + 1] bs=$STRS_F_SIZE count=1 &>/dev/null &&\
+     echo 0 > $STRS_PIPE )
     [ -z $STRS_W_SLEEP ] || sleep $[$RANDOM % ($STRS_W_SLEEP + 1)]
   done
 }
 
 strs_read() {
   while :; do
-    dd if=${STRS_W_DIR}/$[$RANDOM % $STRS_W_P_COUNT + 1]/$[$RANDOM % $STRS_W_F_COUNT + 1] of=/dev/null &> /dev/null &&\
-    echo 1 > $STRS_PIPE
+    # Same as in write.
+    ( dd if=${STRS_W_DIR}/$[$RANDOM % $STRS_W_P_COUNT + 1]/$[$RANDOM % $STRS_W_F_COUNT + 1] of=/dev/null &> /dev/null &&\
+      echo 1 > $STRS_PIPE )
     [ -z $STRS_R_SLEEP ] || sleep $[$RANDOM % ($STRS_R_SLEEP + 1) ]
   done
 }
