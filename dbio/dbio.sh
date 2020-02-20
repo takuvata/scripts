@@ -1,7 +1,7 @@
 #!/bin/bash
 
 [ -z $DBIO_W_P_COUNT ] && DBIO_W_P_COUNT=5
-[ -z $DBIO_W_RECORD_COUNT ] && DBIO_RECORD_COUNT=10000
+[ -z $DBIO_W_RECORD_COUNT ] && DBIO_RECORD_COUNT=1000
 [ -z $DBIO_R_P_COUNT ] && DBIO_R_P_COUNT=5
 
 [ -z $DBIO_W_SLEEP ] && DBIO_W_SLEEP=1
@@ -32,7 +32,7 @@ dbio_init() {
   echo -n Initializing data set...
   $CLIENT "CREATE TABLE IF NOT EXISTS $DBIO_TABLE (id INT AUTO_INCREMENT PRIMARY KEY, data INT NOT NULL ) ENGINE=INNODB;"
   for record in $(seq 1 $DBIO_RECORD_COUNT); do
-    $CLIENT "INSERT INTO $DBIO_TABLE (data) VALUES($[$RANDOM % 100]);"
+    $CLIENT "INSERT INTO $DBIO_TABLE (data) VALUES(0);"
   done
   echo done
 }
