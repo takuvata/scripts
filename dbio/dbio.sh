@@ -25,9 +25,10 @@ CLIENT="mysql -h ${DBIO_HOST} -P ${DBIO_PORT} -u $DBIO_USER --password=$DBIO_PAS
 cleanup(){
   pkill -P $$
   rm -f ${DBIO_PIPE}
+  $CLIENT "drop table $DBIO_TABLE;"
 }
 
-strs_init() {
+dbio_init() {
   echo -n Initializing data set...
   $CLIENT "CREATE TABLE IF NOT EXISTS $DBIO_TABLE (id INT AUTO_INCREMENT PRIMARY KEY, data INT NOT NULL ) ENGINE=INNODB;"
   for record in $(seq 1 $DBIO_RECORD_COUNT); do
@@ -47,7 +48,7 @@ dbio_write() {
   done
 }
 
-strs_read() {
+dbio_read() {
   while :; do
     (
       $CLIENT "SELECT data FROM $DBIO_TABLE WHERE id = $[$RANDOM % $DBIO_RECORD_COUNT + 1];" &> /dev/null &&\
@@ -62,12 +63,14 @@ trap "cleanup; exit 0" SIGHUP SIGINT SIGTERM
 
 echo Starting with $DBIO_W_P_COUNT write, $DBIO_R_P_COUNT read processes.
 
+dbio_init
+
 for w_process in $(seq 1 $DBIO_W_P_COUNT); do 
   dbio_write &
 done
 
 for r_process in $(seq 1 $DBIO_R_P_COUNT); do 
-  strs_read &
+  dbio_read &
 done
 
 reads=0
